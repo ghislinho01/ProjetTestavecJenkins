@@ -15,8 +15,6 @@ pipeline {
         JAR_NAME = 'projettest.jar'  // Nom du fichier JAR généré par Maven
         DEPLOY_DIR = 'C:\\Users\\DGMP\\Desktop\\JAR\\test\\Dev\\back'  // Répertoire de déploiement sur windows
         CONFIG_FILE = "${DEPLOY_DIR}\\config\\application-dev.properties"  // Fichier de configuration de l'application
-        NSSM_PATH = 'C:\\nssm\\nssm.exe'  // Chemin vers l'outil NSSM pour gérer le service Windows
-        SERVICE_NAME = 'AtsinDev'  // Nom du service Windows
     }
 
     stages {
@@ -43,23 +41,9 @@ pipeline {
         stage('Deploiement') {
             steps {
                 script {
-                    echo "Vérification de l'existence du service ${SERVICE_NAME}..."
-
-                    // Vérifie si le service existe déjà sur la machine Windows
-                    def serviceExists = bat(script: "sc query ${SERVICE_NAME} | findstr /C:\"SERVICE_NAME\"", returnStatus: true) == 0
-
-                    // Si le service existe, il est arrêté et supprimé avant d'être recréé
-                    if (serviceExists) {
-                        echo "Service ${SERVICE_NAME} trouvé. Arrêt et suppression..."
-                        bat "${NSSM_PATH} stop ${SERVICE_NAME} || echo Service non démarré"
-                        sleep 5  // Pause de 5 secondes avant suppression
-                        bat "${NSSM_PATH} remove ${SERVICE_NAME} confirm"
-                    } else {
-                        echo "Service ${SERVICE_NAME} non trouvé, création d'un nouveau service."
-                    }
+                    echo "Vérification de l'existence du fichier JAR..."
 
                     // Vérifie si le fichier JAR existe après la construction
-                    echo "Vérification de l'existence du fichier JAR..."
                     def jarExists = fileExists("${BUILD_DIR}\\${JAR_NAME}")
                     if (!jarExists) {
                         error "Fichier JAR introuvable : ${BUILD_DIR}\\${JAR_NAME}"
@@ -78,45 +62,11 @@ pipeline {
                     echo "Copie du nouveau JAR vers ${DEPLOY_DIR}"
                     bat "copy /Y ${BUILD_DIR}\\${JAR_NAME} ${DEPLOY_DIR}\\${JAR_NAME}"
 
-                    // Création et démarrage du service avec NSSM en utilisant des privilèges administratifs
-                    echo "Création du service ${SERVICE_NAME} avec NSSM..."
-                    bat """
-                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'install ${SERVICE_NAME} \"${JAVA_HOME}\\bin\\java.exe\" \"-jar ${DEPLOY_DIR}\\${JAR_NAME}\"' -Verb runAs"
-                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'set ${SERVICE_NAME} AppDirectory ${DEPLOY_DIR}' -Verb runAs"
-                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'set ${SERVICE_NAME} AppStdout ${DEPLOY_DIR}\\app.log' -Verb runAs"
-                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'set ${SERVICE_NAME} AppStderr ${DEPLOY_DIR}\\app.log' -Verb runAs"
-                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'set ${SERVICE_NAME} Start SERVICE_AUTO_START' -Verb runAs"
-                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'start ${SERVICE_NAME}' -Verb runAs"
-                    """
+                    // Lancement du fichier JAR directement sans créer un service Windows
+                    echo "Lancement de l'application avec Java..."
+                    bat "start java -jar ${DEPLOY_DIR}\\${JAR_NAME}"
 
-                    // Vérification que le service a démarré correctement
-                    echo "Vérification de l'état du service après démarrage..."
-                    def serviceStarted = bat(script: "sc query ${SERVICE_NAME} | findstr /C:\"RUNNING\"", returnStatus: true) == 0
-
-                    // Si le service n'a pas démarré, restauration de l'ancien JAR et tentative de redémarrage
-                    if (!serviceStarted) {
-                        echo "Le service ${SERVICE_NAME} n'a pas démarré correctement. Restauration de l'ancien JAR..."
-
-                        // Récupère la liste des fichiers de sauvegarde
-                        def backupFiles = bat(script: "dir /B /O-D ${DEPLOY_DIR}\\backup_*.jar", returnStdout: true).trim().split("\n")
-                        if (backupFiles.length > 0) {
-                            def lastBackup = backupFiles[0].trim()
-                            bat "move /Y ${DEPLOY_DIR}\\${lastBackup} ${DEPLOY_DIR}\\${JAR_NAME}"
-                            echo "Ancien JAR restauré. Tentative de redémarrage du service..."
-                            bat "${NSSM_PATH} start ${SERVICE_NAME}"
-
-                            // Vérification que le service redémarré fonctionne
-                            def restartSuccess = bat(script: "sc query ${SERVICE_NAME} | findstr /C:\"RUNNING\"", returnStatus: true) == 0
-                            if (!restartSuccess) {
-                                error "Impossible de restaurer et redémarrer le service ${SERVICE_NAME}."
-                            }
-                        } else {
-                            error "Aucun backup trouvé pour restaurer l'ancien JAR."
-                        }
-                    }
-
-                    // Confirmation du démarrage du service
-                    echo "Service ${SERVICE_NAME} installé et démarré avec succès."
+                    echo "Déploiement réussi et application lancée sans service Windows."
                 }
             }
         }
