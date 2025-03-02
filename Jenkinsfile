@@ -13,7 +13,7 @@ pipeline {
         BUILD_DIR = 'target'  // Répertoire de sortie pour le build Maven
         //JAR_NAME = 'monprojetspringboot-0.0.1-SNAPSHOT.jar'  // Nom du fichier JAR généré par Maven
         JAR_NAME = 'monprojetspringboot-0.0.1-SNAPSHOT.jar'  // Nom du fichier JAR généré par Maven
-        DEPLOY_DIR = 'C:\\Users\\DGMP\\Desktop\\JAR\\test\\Dev\\back'  // Répertoire de déploiement
+        DEPLOY_DIR = 'C:\\Users\\DGMP\\Desktop\\JAR\\test\\Dev\\back'  // Répertoire de déploiement sur windows
         CONFIG_FILE = "${DEPLOY_DIR}\\config\\application-dev.properties"  // Fichier de configuration de l'application
         NSSM_PATH = 'C:\\nssm\\nssm.exe'  // Chemin vers l'outil NSSM pour gérer le service Windows
         SERVICE_NAME = 'atsinDev'  // Nom du service Windows
