@@ -16,7 +16,7 @@ pipeline {
         DEPLOY_DIR = 'C:\\Users\\DGMP\\Desktop\\JAR\\test\\Dev\\back'  // Répertoire de déploiement sur windows
         CONFIG_FILE = "${DEPLOY_DIR}\\config\\application-dev.properties"  // Fichier de configuration de l'application
         NSSM_PATH = 'C:\\nssm\\nssm.exe'  // Chemin vers l'outil NSSM pour gérer le service Windows
-        SERVICE_NAME = 'atsinDev'  // Nom du service Windows
+        SERVICE_NAME = 'AtsinDev'  // Nom du service Windows
     }
 
     stages {
