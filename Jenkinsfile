@@ -78,15 +78,15 @@ pipeline {
                     echo "Copie du nouveau JAR vers ${DEPLOY_DIR}"
                     bat "copy /Y ${BUILD_DIR}\\${JAR_NAME} ${DEPLOY_DIR}\\${JAR_NAME}"
 
-                    // Création et démarrage du service avec NSSM
+                    // Création et démarrage du service avec NSSM en utilisant des privilèges administratifs
                     echo "Création du service ${SERVICE_NAME} avec NSSM..."
                     bat """
-                    ${NSSM_PATH} install ${SERVICE_NAME} "${JAVA_HOME}\\bin\\java.exe" "-jar ${DEPLOY_DIR}\\${JAR_NAME}"
-                    ${NSSM_PATH} set ${SERVICE_NAME} AppDirectory ${DEPLOY_DIR}
-                    ${NSSM_PATH} set ${SERVICE_NAME} AppStdout ${DEPLOY_DIR}\\app.log
-                    ${NSSM_PATH} set ${SERVICE_NAME} AppStderr ${DEPLOY_DIR}\\app.log
-                    ${NSSM_PATH} set ${SERVICE_NAME} Start SERVICE_AUTO_START
-                    ${NSSM_PATH} start ${SERVICE_NAME}
+                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'install ${SERVICE_NAME} \"${JAVA_HOME}\\bin\\java.exe\" \"-jar ${DEPLOY_DIR}\\${JAR_NAME}\"' -Verb runAs"
+                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'set ${SERVICE_NAME} AppDirectory ${DEPLOY_DIR}' -Verb runAs"
+                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'set ${SERVICE_NAME} AppStdout ${DEPLOY_DIR}\\app.log' -Verb runAs"
+                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'set ${SERVICE_NAME} AppStderr ${DEPLOY_DIR}\\app.log' -Verb runAs"
+                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'set ${SERVICE_NAME} Start SERVICE_AUTO_START' -Verb runAs"
+                    powershell -Command "Start-Process '${NSSM_PATH}' -ArgumentList 'start ${SERVICE_NAME}' -Verb runAs"
                     """
 
                     // Vérification que le service a démarré correctement
