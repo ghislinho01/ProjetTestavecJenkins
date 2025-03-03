@@ -2,8 +2,8 @@ pipeline {
     agent any  // Utilise un agent disponible pour l'exécution du pipeline
 
     tools {
-        jdk 'jdk-17'  // Spécifie l'emplacement de JDK à utiliser
-        maven 'maven-3.9.9'  // Spécifie l'emplacement de Maven à utiliser
+        jdk 'JAVA_HOME'  // Spécifie l'emplacement de JDK à utiliser
+        maven 'MAVEN_HOME'  // Spécifie l'emplacement de Maven à utiliser
     }
 
     environment {
