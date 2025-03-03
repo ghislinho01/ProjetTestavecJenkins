@@ -33,7 +33,8 @@ pipeline {
                 script {
                     echo "Nettoyage et construction du JAR..."
                     // Exécution de Maven pour nettoyer et construire le JAR avec les arguments spécifiés pour la mémoire
-                    bat "mvn clean package -e -DargLine=\"-Xmx1024m -Xms512m\""
+                    //bat "mvn clean package -e -DargLine=\"-Xmx1024m -Xms512m\""
+                    bat 'mvn clean package -e'
                 }
             }
         }
