@@ -9,10 +9,10 @@ pipeline {
     environment {
         // Définition des variables d'environnement utilisées tout au long du pipeline
         GIT_REPO_URL = 'https://github.com/ghislinho01/ProjetTestavecJenkins.git'  // URL du dépôt Git
-        BRANCH = 'Comptes'  // Branche du dépôt à utiliser pour le checkout
+        BRANCH = 'main'  // Branche du dépôt à utiliser pour le checkout
         BUILD_DIR = 'target'  // Répertoire de sortie pour le build Maven
         JAR_NAME = 'projettest.jar'  // Nom du fichier JAR généré par Maven
-        DEPLOY_DIR = 'C:\\Utilisateurs\\DGMP\\Bureau\\JAR\\test\\Dev\\back'  // Répertoire de déploiement
+        DEPLOY_DIR = 'C:\\Users\\HP\\Desktop\\JAR\\test\\Dev\\back'  // Répertoire de déploiement
         CONFIG_FILE = "${DEPLOY_DIR}\\config\\application-dev.properties"  // Fichier de configuration de l'application
         NSSM_PATH = 'C:\\nssm\\nssm.exe'  // Chemin vers l'outil NSSM pour gérer le service Windows
         SERVICE_NAME = 'atsinDev'  // Nom du service Windows
