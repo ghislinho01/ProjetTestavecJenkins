@@ -40,7 +40,8 @@ pipeline {
             steps {
                 script {
                     echo "Build de l'image Docker..."
-                    sh 'docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest .'
+                    // Utilisation de Git Bash via bat pour Docker Build
+                    bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest ."'
                 }
             }
         }
@@ -49,7 +50,8 @@ pipeline {
             steps {
                 script {
                     echo "Pousser l'image Docker vers le registre..."
-                    sh 'docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest'
+                    // Utilisation de Git Bash pour Docker Push
+                    bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest"'
                 }
             }
         }
@@ -58,9 +60,8 @@ pipeline {
             steps {
                 script {
                     echo "Déploiement de l'application sur Docker Swarm..."
-
-                    // Se connecter au Docker Swarm (assurez-vous que Jenkins a accès à votre cluster)
-                    sh 'docker stack deploy -c docker-compose.yml ${SWARM_STACK_NAME}'
+                    // Déploiement Docker Swarm via Git Bash
+                    bat '"C:\\Program Files\\Git\\bin\\bash.exe" -c "docker stack deploy -c docker-compose.yml ${SWARM_STACK_NAME}"'
                 }
             }
         }
