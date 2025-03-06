@@ -4,7 +4,7 @@ pipeline {
     tools {
         jdk 'JAVA_HOME'  // Spécifie l'emplacement de JDK à utiliser
         maven 'MAVEN_HOME'  // Spécifie l'emplacement de Maven à utiliser
-        docker 'DOCKER_HOME'  // Spécifie l'emplacement de Docker à utiliser
+        dockerTool 'DOCKER_HOME'  // Spécifie l'emplacement de Docker à utiliser
     }
 
     environment {
