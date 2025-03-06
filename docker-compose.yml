@@ -1,0 +1,46 @@
+version: "3.8"  # Version de Docker Compose
+
+services:
+  projettest2:
+    image: ghislain92/projettest2:latest  # Image Docker de l'application (remplace 'mon-registre' par ton registre)
+
+    deploy:
+      mode: replicated  # Mode Swarm, utilise plusieurs réplicas du service
+      replicas: 2  # Nombre d'instances du service pour assurer la disponibilité et la scalabilité
+
+      restart_policy:
+        condition: on-failure  # Redémarrer uniquement si le conteneur échoue
+        delay: 5s  # Attendre 5 secondes avant de redémarrer
+        max_attempts: 3  # Limite de tentatives de redémarrage
+        window: 30s  # Période d'observation des erreurs avant d'abandonner le redémarrage
+
+      update_config:
+        parallelism: 1  # Mise à jour des conteneurs un par un
+        delay: 10s  # Temps d'attente entre chaque mise à jour
+        failure_action: rollback  # Annule la mise à jour en cas d'échec pour éviter une panne globale
+
+    ports:
+      - "5000:5000"  # Redirection du port 5000 du conteneur vers le port 5000 de l'hôte
+
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev  # Activation du profil Spring Boot "dev"
+      - SPRING_CONFIG_LOCATION=file:/app/application.properties,file:/app/application-dev.properties  # Configuration des fichiers de propriétés
+
+    volumes:
+      - app-data:/app  # Volume pour stocker les fichiers persistants
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/actuator/health"]  # Vérifie si l'application répond
+      interval: 30s  # Vérification toutes les 30 secondes
+      timeout: 10s  # Temps maximum pour répondre
+      retries: 3  # Nombre de tentatives avant de considérer le conteneur comme défaillant
+
+    logging:
+      driver: "json-file"  # Utilisation du journal JSON pour stocker les logs
+      options:
+        max-size: "10m"  # Taille maximale des logs par fichier (10 Mo)
+        max-file: "3"  # Nombre de fichiers log conservés avant suppression des plus anciens
+
+# Définition des volumes utilisés pour la persistance des données
+volumes:
+  app-data:

@@ -4,135 +4,74 @@ pipeline {
     tools {
         jdk 'JAVA_HOME'  // Spécifie l'emplacement de JDK à utiliser
         maven 'MAVEN_HOME'  // Spécifie l'emplacement de Maven à utiliser
+        docker 'DOCKER_HOME'  // Spécifie l'emplacement de Docker à utiliser
     }
 
     environment {
-        // Définition des variables d'environnement utilisées tout au long du pipeline
-        GIT_REPO_URL = 'https://github.com/ghislinho01/ProjetTestavecJenkins.git'  // URL du dépôt Git
-        BRANCH = 'main'  // Branche du dépôt à utiliser pour le checkout
-        BUILD_DIR = 'target'  // Répertoire de sortie pour le build Maven
-        JAR_NAME = 'projettest.jar'  // Nom du fichier JAR généré par Maven
-        DEPLOY_DIR = 'C:\\Users\\HP\\Desktop\\JAR\\test\\Dev\\back'  // Répertoire de déploiement
-        CONFIG_FILE = "${DEPLOY_DIR}\\config\\application-dev.properties"  // Fichier de configuration de l'application
-        NSSM_PATH = 'C:\\nssm\\nssm.exe'  // Chemin vers l'outil NSSM pour gérer le service Windows
-        SERVICE_NAME = 'atsinDev'  // Nom du service Windows
+        GIT_REPO_URL = 'https://github.com/ghislinho01/ProjetTestavecJenkins.git'
+        BRANCH = 'main'
+        BUILD_DIR = 'target'
+        JAR_NAME = 'projettest.jar'
+        DEPLOY_DIR = 'C:\\Users\\DGMP\\Desktop\\JAR\\test\\Dev\\back'
+        NSSM_PATH = 'C:\\nssm\\nssm.exe'
+        SERVICE_NAME = 'atsinDev'
+        DOCKER_REGISTRY = 'docker.io/ghislain92'
+        DOCKER_IMAGE_NAME = 'projettest2'
+        SWARM_STACK_NAME = 'springboot-stack1'
     }
 
     stages {
-        // Première étape : Paramétrage
-        stage('Parametrage') {
+        stage('Paramétrage') {
             steps {
-                // Récupération du code source depuis le dépôt Git spécifié
                 git branch: "${BRANCH}", url: "${GIT_REPO_URL}"
             }
         }
 
-        // Deuxième étape : Construction du fichier JAR avec Maven
         stage('Construction du JAR') {
             steps {
                 script {
                     echo "Nettoyage et construction du JAR..."
-                    // Exécution de Maven pour nettoyer et construire le JAR avec les arguments spécifiés pour la mémoire
-                    //bat "mvn clean package -e -DargLine=\"-Xmx1024m -Xms512m\""
-                    //bat 'mvn clean package -e'
-                    //bat 'mvn validate -e -DargLine="-Xmx1024m -Xms512m"'
                     bat 'mvn clean install -DskipTests'
                 }
             }
         }
 
-        // Troisième étape : Déploiement de l'application
-        stage('Deploiement') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    echo "Vérification de l'existence du service ${SERVICE_NAME}..."
+                    echo "Build de l'image Docker..."
+                    sh 'docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest .'
+                }
+            }
+        }
 
-                    // Vérifie si le service existe déjà sur la machine Windows
-                    def serviceExists = bat(script: "sc query ${SERVICE_NAME} | findstr /C:\"SERVICE_NAME\"", returnStatus: true) == 0
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    echo "Pousser l'image Docker vers le registre..."
+                    sh 'docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:latest'
+                }
+            }
+        }
 
-                    // Si le service existe, il est arrêté et supprimé avant d'être recréé
-                    if (serviceExists) {
-                        echo "Service ${SERVICE_NAME} trouvé. Arrêt et suppression..."
-                        bat "${NSSM_PATH} stop ${SERVICE_NAME} || echo Service non démarré"
-                        sleep 5  // Pause de 5 secondes avant suppression
-                        bat "${NSSM_PATH} remove ${SERVICE_NAME} confirm"
-                    } else {
-                        echo "Service ${SERVICE_NAME} non trouvé, création d'un nouveau service."
-                    }
+        stage('Deploy to Docker Swarm') {
+            steps {
+                script {
+                    echo "Déploiement de l'application sur Docker Swarm..."
 
-                    // Vérifie si le fichier JAR existe après la construction
-                    echo "Vérification de l'existence du fichier JAR..."
-                    def jarExists = fileExists("${BUILD_DIR}\\${JAR_NAME}")
-                    if (!jarExists) {
-                        error "Fichier JAR introuvable : ${BUILD_DIR}\\${JAR_NAME}"
-                    }
-
-                    // Sauvegarde du fichier JAR précédent s'il existe déjà
-                    echo "Sauvegarde de l'ancien JAR si nécessaire..."
-                    def oldJarPath = "${DEPLOY_DIR}\\${JAR_NAME}"
-                    if (fileExists(oldJarPath)) {
-                        def backupPath = "${DEPLOY_DIR}\\backup_${JAR_NAME}_${new Date().format('yyyyMMddHHmmss')}"
-                        echo "Sauvegarde de l'ancien JAR vers ${backupPath}"
-                        bat "move /Y ${oldJarPath} ${backupPath}"
-                    }
-
-                    // Copie du nouveau fichier JAR dans le répertoire de déploiement
-                    echo "Copie du nouveau JAR vers ${DEPLOY_DIR}"
-                    bat "copy /Y ${BUILD_DIR}\\${JAR_NAME} ${DEPLOY_DIR}\\${JAR_NAME}"
-
-                    // Création et démarrage du service avec NSSM
-                    echo "Création du service ${SERVICE_NAME} avec NSSM..."
-                    bat """
-                    ${NSSM_PATH} install ${SERVICE_NAME} "${JAVA_HOME}\\bin\\java.exe" "-jar ${DEPLOY_DIR}\\${JAR_NAME}"
-                    ${NSSM_PATH} set ${SERVICE_NAME} AppDirectory ${DEPLOY_DIR}
-                    ${NSSM_PATH} set ${SERVICE_NAME} AppStdout ${DEPLOY_DIR}\\app.log
-                    ${NSSM_PATH} set ${SERVICE_NAME} AppStderr ${DEPLOY_DIR}\\app.log
-                    ${NSSM_PATH} set ${SERVICE_NAME} Start SERVICE_AUTO_START
-                    ${NSSM_PATH} start ${SERVICE_NAME}
-                    """
-
-                    // Vérification que le service a démarré correctement
-                    echo "Vérification de l'état du service après démarrage..."
-                    def serviceStarted = bat(script: "sc query ${SERVICE_NAME} | findstr /C:\"RUNNING\"", returnStatus: true) == 0
-
-                    // Si le service n'a pas démarré, restauration de l'ancien JAR et tentative de redémarrage
-                    if (!serviceStarted) {
-                        echo "Le service ${SERVICE_NAME} n'a pas démarré correctement. Restauration de l'ancien JAR..."
-
-                        // Récupère la liste des fichiers de sauvegarde
-                        def backupFiles = bat(script: "dir /B /O-D ${DEPLOY_DIR}\\backup_*.jar", returnStdout: true).trim().split("\n")
-                        if (backupFiles.length > 0) {
-                            def lastBackup = backupFiles[0].trim()
-                            bat "move /Y ${DEPLOY_DIR}\\${lastBackup} ${DEPLOY_DIR}\\${JAR_NAME}"
-                            echo "Ancien JAR restauré. Tentative de redémarrage du service..."
-                            bat "${NSSM_PATH} start ${SERVICE_NAME}"
-
-                            // Vérification que le service redémarré fonctionne
-                            def restartSuccess = bat(script: "sc query ${SERVICE_NAME} | findstr /C:\"RUNNING\"", returnStatus: true) == 0
-                            if (!restartSuccess) {
-                                error "Impossible de restaurer et redémarrer le service ${SERVICE_NAME}."
-                            }
-                        } else {
-                            error "Aucun backup trouvé pour restaurer l'ancien JAR."
-                        }
-                    }
-
-                    // Confirmation du démarrage du service
-                    echo "Service ${SERVICE_NAME} installé et démarré avec succès."
+                    // Se connecter au Docker Swarm (assurez-vous que Jenkins a accès à votre cluster)
+                    sh 'docker stack deploy -c docker-compose.yml ${SWARM_STACK_NAME}'
                 }
             }
         }
     }
 
-    // Étapes post-pipeline : actions après la fin du pipeline
     post {
-        // Si le pipeline réussit, afficher un message de succès
         success {
-            echo "Build et déploiement de ${JAR_NAME} réussis."
+            echo "Build et déploiement sur Docker Swarm réussis."
         }
-        // Si le pipeline échoue, afficher un message d'échec
         failure {
-            echo "Échec du build ou du déploiement de ${JAR_NAME}."
+            echo "Échec du build ou du déploiement."
         }
     }
 }
